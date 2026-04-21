@@ -116,10 +116,39 @@ main {
   cursor: not-allowed;
 }
 
-.status-badge.listening {
+.status-badge.isRecording {
+  color: #ef4444;
+  border-color: #ef4444;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.status-badge.isTranscribing {
   color: #fbbf24;
-  box-shadow: 0 0 15px var(--listening-glow);
-  transform: scale(1.05);
+  border-color: #fbbf24;
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+}
+
+.status-badge.isDownloading {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.status-badge.isRecording .dot {
+  animation: pulse-red 1.5s infinite;
+}
+
+.status-badge.isTranscribing .dot {
+  animation: bounce 0.6s infinite alternate;
+}
+
+@keyframes bounce {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-4px);
+  }
 }
 
 .dot {
@@ -332,6 +361,14 @@ main {
   box-shadow: 0 15px 20px -5px rgba(239, 68, 68, 0.5);
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: grayscale(0.8);
+}
+
 .medical-grid {
   display: flex;
   flex-direction: column;
@@ -363,11 +400,11 @@ main {
   grid-template-columns: repeat(1, 1fr);
   gap: 1.25rem;
   text-align: left;
-  
+
 }
 
 .form-group {
-  
+
   /* display: flex; */
   /* flex-direction: column; */
   gap: 0.5rem;
@@ -412,9 +449,15 @@ main {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.25rem;
-  
 }
 
+.field-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.copy-btn,
 .mic-btn {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -429,10 +472,18 @@ main {
   transition: all 0.2s;
 }
 
-.mic-btn:hover {
+.copy-btn:hover:not(:disabled),
+.mic-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-main);
   transform: scale(1.1);
+}
+
+.copy-btn:disabled,
+.mic-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 .mic-btn.recording {

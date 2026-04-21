@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@remotion/whisper-web": "^4.0.450",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-speech-recognition": "^4.0.1",
