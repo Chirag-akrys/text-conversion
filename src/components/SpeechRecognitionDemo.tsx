@@ -51,8 +51,11 @@ const SpeechRecognitionDemo: React.FC = () => {
                     <button
                         className="btn start-btn"
                         onClick={() => {
+                            console.log("Starting listening...");
                             resetHookTranscript();
+                            console.log("Transcript reset...");
                             SpeechRecognition.startListening({ continuous: true });
+                            console.log("Listening end...");
                         }}
                     >
                         Start Listening
