@@ -47,6 +47,7 @@ const SpeechRecognitionDemo: React.FC = () => {
             <p className="description">Now capturing ALL words correctly even after edits!</p>
 
             <div className="controls">
+                {console.log("isListening:", listening)}
                 {!listening ? (
                     <button
                         className="btn start-btn"
