@@ -41,13 +41,13 @@ const SpeechRecognitionDemo: React.FC = () => {
         }
     };
 
+    console.log("isListening:", listening)
     return (
         <div className="demo-component rsr-demo">
             <h2>React Speech Recognition</h2>
             <p className="description">Now capturing ALL words correctly even after edits!</p>
 
             <div className="controls">
-                {console.log("isListening:", listening)}
                 {!listening ? (
                     <button
                         className="btn start-btn"
