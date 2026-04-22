@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { transcribe, downloadWhisperModel, WhisperWebLanguage } from '@remotion/whisper-web';
 
 export const useWhisperWeb = () => {
@@ -10,6 +10,7 @@ export const useWhisperWeb = () => {
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
+    const audioContextRef = useRef<AudioContext | null>(null);
 
     const ensureModelDownloaded = useCallback(async () => {
         setIsDownloading(true);
@@ -33,28 +34,41 @@ export const useWhisperWeb = () => {
         if (!isPartial) setIsTranscribing(true);
         try {
             console.log(`${isPartial ? 'Partial' : 'Final'} audio processing...`);
-            await ensureModelDownloaded();
+            // await ensureModelDownloaded();
 
-            const audioContext = new AudioContext({ sampleRate: 16000 });
+            if (!audioContextRef.current) {
+                audioContextRef.current = new AudioContext({ sampleRate: 16000 });
+            }
+
+            const audioContext = audioContextRef.current;
             const arrayBuffer = await audioBlob.arrayBuffer();
             const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
             const audioData = audioBuffer.getChannelData(0); // Get first channel
 
             console.log(`Transcribing ${audioData.length / 16000} seconds of audio...`);
 
+            // const result = await transcribe({
+            //     model: 'tiny',
+            //     channelWaveform: audioData,
+            //     language: (language === 'auto' ? undefined : language) as WhisperWebLanguage,
+            //     onTranscriptionChunk: (chunks) => {
+            //         const partialText = chunks.map(c => c.text).join(' ');
+            //         console.log("Partial transcription:", partialText);
+            //         setTranscript(partialText);
+            //     }
+            // });
             const result = await transcribe({
                 model: 'tiny',
                 channelWaveform: audioData,
                 language: (language === 'auto' ? undefined : language) as WhisperWebLanguage,
+                threads: navigator.hardwareConcurrency || 4,
                 onTranscriptionChunk: (chunks) => {
                     const partialText = chunks.map(c => c.text).join(' ');
-                    console.log("Partial transcription:", partialText);
                     setTranscript(partialText);
                 }
             });
-
-            const text = result.transcription.map(t => t.text).join(' ');
-            console.log("Final transcription result:", text);
+            const text = result.transcription.map(t => t.text).join(' ').trim();
+            console.log("Setting FINAL transcript to state:", text);
             setTranscript(text);
 
         } catch (err) {
@@ -65,6 +79,9 @@ export const useWhisperWeb = () => {
         }
     };
 
+    useEffect(() => {
+        ensureModelDownloaded();
+    }, []);
     const isProcessingRef = useRef(false);
 
     const startRecording = useCallback(async (language: string = 'en') => {
@@ -78,17 +95,9 @@ export const useWhisperWeb = () => {
             mediaRecorderRef.current = mediaRecorder;
             audioChunksRef.current = [];
 
-            mediaRecorder.ondataavailable = async (event) => {
+            mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     audioChunksRef.current.push(event.data);
-
-                    // Periodic partial transcription
-                    if (!isProcessingRef.current && audioChunksRef.current.length % 3 === 0) {
-                        isProcessingRef.current = true;
-                        const tempBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-                        await processAudio(tempBlob, language, true);
-                        isProcessingRef.current = false;
-                    }
                 }
             };
 
@@ -101,7 +110,7 @@ export const useWhisperWeb = () => {
                 stream.getTracks().forEach(track => track.stop());
             };
 
-            mediaRecorder.start();
+            mediaRecorder.start(1000);
             setIsRecording(true);
         } catch (err) {
             console.error('Error starting recording:', err);
