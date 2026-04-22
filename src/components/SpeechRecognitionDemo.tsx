@@ -10,7 +10,7 @@ const SpeechRecognitionDemo: React.FC = () => {
     } = useSpeechRecognition();
 
     const [mainText, setMainText] = useState('');
-    const lastTranscriptRef = useRef('');
+    const [isConnecting, setIsConnecting] = useState(false);
 
     // Append finalized speech to the main text
     useEffect(() => {
@@ -20,22 +20,35 @@ const SpeechRecognitionDemo: React.FC = () => {
         }
     }, [listening, transcript, resetHookTranscript]);
 
+    // Handle connecting states
+    useEffect(() => {
+        if (listening) {
+            setIsConnecting(false);
+        }
+    }, [listening]);
+
     if (!browserSupportsSpeechRecognition) {
         return <div className="demo-component">Browser doesn't support speech recognition.</div>;
     }
 
+    const startListening = () => {
+        setIsConnecting(true);
+        SpeechRecognition.startListening({ continuous: true });
+    };
+
     return (
         <div className="demo-component rsr-demo">
             <h2>React Speech Recognition</h2>
-            <p className="description">Using native Browser Speech API (Now with Appending)</p>
+            <p className="description">Using native Browser Speech API (Now with Connecting status)</p>
 
             <div className="controls">
                 {!listening ? (
                     <button
-                        className="btn start-btn"
-                        onClick={() => SpeechRecognition.startListening({ continuous: true })}
+                        className={`btn start-btn ${isConnecting ? 'loading' : ''}`}
+                        onClick={startListening}
+                        disabled={isConnecting}
                     >
-                        Start Listening
+                        {isConnecting ? 'Connecting...' : 'Start Listening'}
                     </button>
                 ) : (
                     <button className="btn stop-btn" onClick={SpeechRecognition.stopListening}>
@@ -45,10 +58,12 @@ const SpeechRecognitionDemo: React.FC = () => {
                 <button className="btn clear-btn" onClick={() => {
                     setMainText('');
                     resetHookTranscript();
+                    setIsConnecting(false);
                 }}>Clear</button>
             </div>
 
             <div className="status">
+                {isConnecting && <span className="badge processing">Connecting...</span>}
                 {listening && <span className="badge recording">Listening...</span>}
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useWhisperWeb } from '../hooks/useWhisperWeb';
 
 const WhisperDemo: React.FC = () => {
@@ -14,31 +14,46 @@ const WhisperDemo: React.FC = () => {
     } = useWhisperWeb();
 
     const [language, setLanguage] = useState('en');
-    const [fullTranscript, setFullTranscript] = useState('');
-    const [isProcessingDone, setIsProcessingDone] = useState(false);
+    const [mainText, setMainText] = useState('');
+    const hasAppendedRef = useRef(true);
 
-    // Watch for the transition from transcribing to not transcribing
     useEffect(() => {
-        if (!isRecording && isTranscribing) {
-            setIsProcessingDone(false);
+        if (isRecording) {
+            hasAppendedRef.current = false;
         }
-        if (!isRecording && !isTranscribing && whisperTranscript && !isProcessingDone) {
-            // This is the final step
-            setFullTranscript(prev => prev + (prev ? ' ' : '') + whisperTranscript);
+    }, [isRecording]);
+
+    useEffect(() => {
+        if (!isRecording && !isTranscribing && !hasAppendedRef.current && whisperTranscript) {
+            setMainText(prev => {
+                const trimmedPrev = prev.trim();
+                return trimmedPrev + (trimmedPrev ? ' ' : '') + whisperTranscript.trim();
+            });
             setTranscript('');
-            setIsProcessingDone(true);
+            hasAppendedRef.current = true;
         }
-    }, [isRecording, isTranscribing, whisperTranscript, isProcessingDone, setTranscript]);
+    }, [isRecording, isTranscribing, whisperTranscript, setTranscript]);
+
+    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newValue = e.target.value;
+        if ((isTranscribing || isRecording) && whisperTranscript && newValue.endsWith(whisperTranscript)) {
+            setMainText(newValue.slice(0, newValue.length - whisperTranscript.length).trimEnd());
+        } else {
+            setMainText(newValue);
+            if (!isTranscribing && !isRecording) setTranscript('');
+        }
+    };
 
     const handleClear = () => {
-        setFullTranscript('');
+        setMainText('');
         setTranscript('');
+        hasAppendedRef.current = true;
     };
 
     return (
         <div className="demo-component whisper-demo">
             <h2>Whisper Web Demo</h2>
-            <p className="description">Offline transcription using Whisper.cpp (WASM)</p>
+            <p className="description">Offline Whisper (Pro Sync logic)</p>
 
             <div className="controls">
                 <select
@@ -78,8 +93,8 @@ const WhisperDemo: React.FC = () => {
             <div className="transcript-box">
                 <label>Transcript:</label>
                 <textarea
-                    value={fullTranscript + (isTranscribing && whisperTranscript ? (fullTranscript ? ' ' : '') + whisperTranscript : '')}
-                    onChange={(e) => setFullTranscript(e.target.value)}
+                    value={mainText + (whisperTranscript ? (mainText ? ' ' : '') + whisperTranscript : '')}
+                    onChange={handleTextChange}
                     placeholder="Transcription will appear here..."
                 />
             </div>
