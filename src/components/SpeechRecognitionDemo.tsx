@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 const SpeechRecognitionDemo: React.FC = () => {
@@ -10,29 +10,50 @@ const SpeechRecognitionDemo: React.FC = () => {
     } = useSpeechRecognition();
 
     const [mainText, setMainText] = useState('');
+    const wasListeningRef = useRef(false);
 
-    // Append finalized speech to the main text
+    // FIX: This takes the final speech and permanently adds it to your text
     useEffect(() => {
-        if (!listening && transcript) {
-            setMainText(prev => prev + (prev ? ' ' : '') + transcript);
+        if (wasListeningRef.current && !listening && transcript) {
+            setMainText(prev => {
+                const trimmedPrev = prev.trim();
+                return trimmedPrev + (trimmedPrev ? ' ' : '') + transcript.trim();
+            });
             resetHookTranscript();
         }
+        wasListeningRef.current = listening;
     }, [listening, transcript, resetHookTranscript]);
 
     if (!browserSupportsSpeechRecognition) {
         return <div className="demo-component">Browser doesn't support speech recognition.</div>;
     }
 
+    // IMPORTANT: This function handles edits so that your speech doesn't duplicate
+    const handleTextEdit = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newValue = e.target.value;
+
+        if (listening && transcript && newValue.endsWith(transcript)) {
+            // If you edit while listening, we only save the part BEFORE the live speech
+            setMainText(newValue.slice(0, newValue.length - transcript.length).trimEnd());
+        } else {
+            // Otherwise, we just save exactly what you typed
+            setMainText(newValue);
+        }
+    };
+
     return (
         <div className="demo-component rsr-demo">
             <h2>React Speech Recognition</h2>
-            <p className="description">Using native Browser Speech API (Simple Flow)</p>
+            <p className="description">Now capturing ALL words correctly even after edits!</p>
 
             <div className="controls">
                 {!listening ? (
                     <button
                         className="btn start-btn"
-                        onClick={() => SpeechRecognition.startListening({ continuous: true })}
+                        onClick={() => {
+                            resetHookTranscript();
+                            SpeechRecognition.startListening({ continuous: true });
+                        }}
                     >
                         Start Listening
                     </button>
@@ -48,15 +69,15 @@ const SpeechRecognitionDemo: React.FC = () => {
             </div>
 
             <div className="status">
-                {listening && <span className="badge recording">Listening...</span>}
+                {listening && <span className="badge recording">LISTENING...</span>}
             </div>
 
             <div className="transcript-box">
                 <label>Transcript:</label>
                 <textarea
                     value={mainText + (listening && transcript ? (mainText ? ' ' : '') + transcript : '')}
-                    onChange={(e) => setMainText(e.target.value)}
-                    placeholder="Transcription will appear here..."
+                    onChange={handleTextEdit}
+                    placeholder="Type here, then speak... everything will stay!"
                 />
             </div>
         </div>
